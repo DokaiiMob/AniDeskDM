@@ -42,7 +42,9 @@
         largeImageKey: "anidesk-transparent",
         largeImageText: "AniDesk - Anixart Client",
         instance: true,
-        buttons: [{ label: "Ссылка на клиент", url: "https://anidesk.ds1nc.ru/" }],
+        buttons: [
+            { label: "Ссылка на клиент", url: "https://anidesk.ds1nc.ru/" },
+        ],
     });
 
     window.waitForElm = (selector) => {
@@ -73,6 +75,7 @@
         .then((versions) => (window.versions = versions));
     window.anixApi = new Anixart({
         token: utoken?.token,
+        baseUrl: "https://api-s.anixsekai.com", // новый рабочий API
     }).endpoints;
     window.profileInfo = utoken
         ? anixApi.profile
@@ -148,7 +151,13 @@
                     args={viewInfo.args}
                 ></svelte:component>
                 {#if firstRun}
-                <BaseModal modalComponent={FirstRunModal} canCloseOnBackground={false} showed={firstRun} modalSize={{width: "700px", height: "500px"}} on:closeModal={() => firstRun = false} />
+                    <BaseModal
+                        modalComponent={FirstRunModal}
+                        canCloseOnBackground={false}
+                        showed={firstRun}
+                        modalSize={{ width: "700px", height: "500px" }}
+                        on:closeModal={() => (firstRun = false)}
+                    />
                 {/if}
             </div>
         {/key}
