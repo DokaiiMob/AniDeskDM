@@ -1,95 +1,202 @@
-<!--TODO: Recode this-->
-
 <script>
     import { localStorageWritable } from "@babichjacob/svelte-localstorage";
     import MetaInfo from "../components/gui/MetaInfo.svelte";
-    let u;
+    import { onMount } from "svelte";
+
+    let username = "";
+    let password = "";
+    let errorMessage = "";
+    let loading = false;
 
     const user = localStorageWritable("user_token", null);
-    user.subscribe((value) => u = value);
-
-    let invalidLogin = false;
 
     async function login() {
-        const login = document.getElementById("login").value;
-        const password = document.getElementById("password").value;
+        errorMessage = "";
 
-        const res = await anixApi.auth.signIn({
-            login: login,
-            password: password
-        })
+        if (!username.trim() || !password.trim()) {
+            errorMessage = "Введите логин и пароль";
+            return;
+        }
 
-        switch (res.code) {
-            case 0:
-                user.set(JSON.stringify({
-                    id: res.profile.id,
-                    token: res.profileToken.token
-                }));
-                location.reload();
-                analytics.trackEvent("new_login")
-                break;
-            case 2:
-                invalidLogin = true;
-                break;
+        loading = true;
+
+        try {
+            const res = await anixApi.auth.signIn({
+                login: username,
+                password,
+            });
+
+            switch (res.code) {
+                case 0:
+                    user.set(
+                        JSON.stringify({
+                            id: res.profile.id,
+                            token: res.profileToken.token,
+                        }),
+                    );
+                    analytics.trackEvent("new_login");
+                    location.reload();
+                    break;
+                case 2:
+                    errorMessage = "Неверный логин или пароль";
+                    break;
+                default:
+                    errorMessage = "Произошла ошибка авторизации";
+            }
+        } catch (err) {
+            console.error("[Auth Error]", err);
+            errorMessage = "Сервер не отвечает. Повторите позже.";
+        } finally {
+            loading = false;
         }
     }
 </script>
 
-<MetaInfo subTitle="Вход" />
+<MetaInfo subTitle="AniDesk — Вход" />
 
-<div class="login-page">
-    {#if invalidLogin}
-        <div>Неправильный логин или пароль</div>
-    {/if}
-    <div class="login-form">
-        <div class="login-form-title">Вход</div>
-        <div class="login-form-input">
-            <div class="login-form-input-label">Логин</div>
-            <input type="text" id="login" />
-        </div>
-        <div class="login-form-input">
-            <div class="login-form-input-label">Пароль</div>
-            <input type="password" id="password" />
-        </div>
-        <div class="login-form-button" on:click={async () => await login()}>Войти</div>
+<div class="login-wrapper">
+    <div class="login-box">
+        <h2 class="login-title">Вход в AniDesk</h2>
+
+        {#if errorMessage}
+            <div class="error-message">{errorMessage}</div>
+        {/if}
+
+        <input
+            type="text"
+            placeholder="Логин"
+            bind:value={username}
+            class="login-input"
+        />
+
+        <input
+            type="password"
+            placeholder="Пароль"
+            bind:value={password}
+            class="login-input"
+        />
+
+        <button
+            class="login-button {loading ? 'loading' : ''}"
+            disabled={loading || !username || !password}
+            on:click={login}
+        >
+            {#if loading}
+                <span class="dots"
+                    ><span>.</span><span>.</span><span>.</span></span
+                >
+            {:else}
+                Войти
+            {/if}
+        </button>
     </div>
 </div>
 
 <style>
-    .login-page {
+    .login-wrapper {
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--background-color, #0e0e0e);
+    }
+
+    .login-box {
+        background: var(--alt-background-color, #1c1c1c);
+        padding: 40px;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        width: 360px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .login-logo {
+        width: 80px;
+        margin-bottom: 16px;
+        filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.1));
+    }
+
+    .login-title {
+        color: var(--main-text-color, #ffffff);
+        font-size: 22px;
+        font-weight: 600;
+        margin-bottom: 20px;
+    }
+
+    .login-input {
         width: 100%;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
+        padding: 12px;
+        margin-bottom: 14px;
+        background: #2a2a2a;
+        color: #fff;
+        border: 1px solid #444;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: border 0.2s;
     }
 
-    .login-form {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        background-color: var(--alt-background-color);
-        border-radius: 10px;
-        padding-left: 20px;
-        padding-right: 20px;
+    .login-input:focus {
+        border-color: #4a90e2;
+        outline: none;
     }
 
-    .login-form-button {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        cursor: pointer;
-        font-size: 12px;
+    .login-button {
+        width: 100%;
+        padding: 12px;
+        background-color: #4a90e2;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
         font-weight: bold;
-        background-color: #3f3e3e;
-        color: var(--main-text-color);
-        height: 30px;
-        padding-left: 10px;
-        padding-right: 10px;
-        border-radius: 6px;
-        margin-top: 10px;
-        margin-bottom: 10px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .login-button:hover:not(:disabled) {
+        background-color: #3b7cc4;
+    }
+
+    .login-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .login-button .dots {
+        display: flex;
+        justify-content: center;
+        gap: 3px;
+        font-size: 18px;
+    }
+
+    .login-button .dots span {
+        animation: blink 1s infinite;
+    }
+
+    .login-button .dots span:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .login-button .dots span:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+
+    @keyframes blink {
+        0%,
+        80%,
+        100% {
+            opacity: 0;
+        }
+        40% {
+            opacity: 1;
+        }
+    }
+
+    .error-message {
+        color: #ff4d4f;
+        margin-bottom: 14px;
+        text-align: center;
+        font-size: 13px;
     }
 </style>
